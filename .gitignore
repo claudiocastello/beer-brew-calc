@@ -1,1 +1,3 @@
 brewCalc/__pycache__/
+app.env
+brewCalc/brewcalc.db

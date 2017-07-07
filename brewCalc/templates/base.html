@@ -36,20 +36,20 @@
           <ul class="nav navbar-nav">
             {% set navigation_bar = [
                 ('/', 'index', 'Home', ['anon', 'user']),
-                ('/profile', 'profile', 'Profile', ['anon', 'user']),
-                ('/recipes', 'recipes', 'Recipes', ['anon', 'user']),
-                ('/logout', 'logout', 'Sair', ['anon', 'user'])
+                ('/profile', 'profile', 'Profile', ['user']),
+                ('/recipes', 'recipes', 'Recipes', ['user']),
+                ('/logout', 'logout', 'Logout', ['user'])
             ] -%}          
             {% set active_page = active_page|default('home') -%}
             {% for href, id, caption, permissions in navigation_bar %}
-              {% if 'anon' in permissions %}
+              {% if 'anon' in permissions or current_user.role in permissions %}
               <li class="{% if id == active_page %} active{% endif %}">
                 <a href="{{ href|e }}">{{ caption|e }}</a></a>
               </li>
               {% endif %}
             {% endfor %}
             <li class="disabled">
-              <a href="">{{ User | upper }}</a>
+              <a href="">{{ current_user.user | upper }}</a>
             </li>
           </ul>
         </div>

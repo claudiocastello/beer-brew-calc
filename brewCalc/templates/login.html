@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="account-login" class="container">
+  {{ show_flashes() }}
+  <form class="form-signin" action="{{ url_for('login') }}" method="POST">
+    <h2 class="form-signin-heading">Brewer Login</h2>
+    {{ render_bootstrap_field(form.user) }}
+    {{ render_bootstrap_field(form.password) }}
+    {{ render_bootstrap_field(form.remember_me) }}
+    {{ form.csrf_token }}
+    <button class="btn btn-lg btn-success btn-block" type="submit">Login</button>
+    New here? <a href="/create">Create Account</a>
+    <p>Forgot your password? <a href="/recover">Recover Password</a></p>
+  </form>
+</div> <!-- /container -->
+{% endblock %}

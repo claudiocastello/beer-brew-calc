@@ -1,13 +1,20 @@
+## BrewCalc App ##
+## Author: Claudio Castello
+
+## Flask Imports ##
 from flask import request, abort, render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from wtforms import PasswordField
 
+## App Imports ##
 from brewCalc import app, db, login_manager
 from brewCalc.forms import LoginForm, CreateForm, EditForm, RecoverForm, DeleteProfileForm
 from brewCalc.models import User
 
+## Other Imports ##
 from functools import wraps
 
+## Required roles function
 def required_roles(*roles):
     def wrapper(f):
         @wraps(f)
@@ -18,12 +25,14 @@ def required_roles(*roles):
         return wrapped
     return wrapper
 
-
+## Login manager
 @login_manager.user_loader
 def load_user(user):
     return User.query.filter_by(user=user).first()
 
 
+
+## Index
 @app.route('/', methods=['GET'])
 def index():
     if current_user.is_authenticated:
@@ -31,6 +40,7 @@ def index():
     return redirect(url_for('login'))
 
 
+## Login and logout
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -52,6 +62,7 @@ def logout():
     return redirect(url_for('index'))
 
 
+## Create and delete user profile
 @app.route('/create', methods=['GET', 'POST'])
 def create():
     form = CreateForm()
@@ -93,12 +104,6 @@ def delete_profile():
     return render_template('delete-profile.html', form=form)
 
 
-@app.route('/recover', methods=['GET', 'POST'])
-def recover():
-    form = RecoverForm()
-    return render_template('recover.html', form=form)
-
-
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -118,6 +123,20 @@ def profile():
     return render_template('profile.html', form=form)
 
 
+## Recover user and reset password
+@app.route('/recover', methods=['GET', 'POST'])
+def recover():
+    form = RecoverForm()
+    return render_template('recover.html', form=form)
+
+
+@app.route('/reset', methods=['GET', 'POST'])
+def reset():
+    pass
+
+
+
+## Recipe related views
 @app.route('/recipes', methods=['GET'])
 @login_required
 def recipes():

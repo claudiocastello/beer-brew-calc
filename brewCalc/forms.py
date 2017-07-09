@@ -21,6 +21,13 @@ class CreateForm(FlaskForm):
     last_name = StringField('Last Name', validators=[DataRequired(message='Insert your last name'), Length(max=(FIELD_MAX_LIM['last_name']))], description={'placeholder': 'Last name'})
 
 
+class DeleteProfileForm(FlaskForm):
+    user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username'})
+    password = PasswordField('Password', validators=[DataRequired(message='Insert your password')], description={'placeholder': 'Password'})
+    email = StringField('Email', validators=[DataRequired(message='Insert your email'), Email(message='Invalid email address format.')], description={'placeholder': 'Email'})
+    confirm_delete = BooleanField('Check to confirm profile exclusion', default=False)
+ 
+
 class RecoverForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(message='Insert your email')], description={'placeholder': 'Email'})
 

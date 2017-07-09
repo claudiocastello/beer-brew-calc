@@ -39,6 +39,9 @@ class User(db.Model):
     def get_id(self):
         return str(self.user)
 
+    def get_email(self):
+        return str(self.email)
+
     def is_password_correct(self, plaintext):
         return bcrypt.check_password_hash(self.password, plaintext)
 

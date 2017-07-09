@@ -16,7 +16,8 @@
     {{ form.csrf_token }}
     <p>Insert current password to save changes</p>
     {{ render_bootstrap_field(form.old_password) }}
-    <button class="btn btn-lg btn-success btn-block" type="submit">Save</button>
+    <button class="btn btn-lg btn-success btn-block" type="submit">Save</button><br><br>
+    <p><a href="/delete-profile">Click here</a> to delete your profile.</p>
   </form>
 </div> <!-- /container -->
 {% endblock %}

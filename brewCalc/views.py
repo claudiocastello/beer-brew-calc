@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from wtforms import PasswordField
 
 from brewCalc import app, db, login_manager
-from brewCalc.forms import LoginForm, CreateForm, EditForm, RecoverForm
+from brewCalc.forms import LoginForm, CreateForm, EditForm, RecoverForm, DeleteProfileForm
 from brewCalc.models import User
 
 from functools import wraps
@@ -56,7 +56,7 @@ def logout():
 def create():
     form = CreateForm()
     if form.validate_on_submit():
-        if User.query.filter_by(user=form.user.data).first():
+        if User.query.filter_by(user=form.user.data).first() is None:
             user = User(user=form.user.data, password=form.password.data, email=form.email.data, role='user', first_name=form.first_name.data, last_name=form.last_name.data)
             db.session.add(user)
             db.session.commit()
@@ -65,6 +65,32 @@ def create():
         else:
             flash('Username already taken. Choose another one.', 'error')
     return render_template('create.html', form=form)
+
+
+@app.route('/delete-profile', methods=['GET', 'POST'])
+@login_required
+def delete_profile():
+    form = DeleteProfileForm()
+    user = current_user
+    if form.validate_on_submit():
+        if user.is_password_correct(form.password.data):
+            if user.get_id() == form.user.data:
+                if user.get_email() == form.email.data:
+                    if form.confirm_delete.data:
+                        db.session.delete(user)
+                        db.session.commit()
+                        flash('Profile Deleted', 'success')
+                        logout_user()
+                        return redirect(url_for('index'))
+                    else:
+                        flash('Check to confirm profile exclusion', 'error')
+                else:
+                    flash('Incorrect email adress', 'error')
+            else:
+                flash('Incorrect username', 'error')
+        else:
+            flash('Incorrect password', 'error')
+    return render_template('delete-profile.html', form=form)
 
 
 @app.route('/recover', methods=['GET', 'POST'])

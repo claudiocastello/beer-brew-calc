@@ -5,8 +5,8 @@
   <form class="form-signin" action="{{ url_for('create') }}" method="POST">
     <h2 class="form-signin-heading">New Account</h2>
     {{ render_bootstrap_field(form.user) }}
-    {{ render_bootstrap_field(form.password1) }}
-    {{ render_bootstrap_field(form.password2) }}
+    {{ render_bootstrap_field(form.password) }}
+    {{ render_bootstrap_field(form.confirm) }}
     {{ render_bootstrap_field(form.email) }}
     {{ render_bootstrap_field(form.first_name) }}
     {{ render_bootstrap_field(form.last_name) }}

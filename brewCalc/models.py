@@ -3,7 +3,7 @@ from brewCalc import app, db, bcrypt
 from datetime import date
 
 FIELD_MAX_LIM = {
-    'user': 4,
+    'user': 128,
     'password': 128,
     'email': 50,
     'role': 5,
@@ -48,6 +48,9 @@ class User(db.Model):
 
     @password.setter
     def set_password(self, plaintext):
+        self._password = bcrypt.generate_password_hash(plaintext)
+
+    def set_new_password(self, plaintext):
         self._password = bcrypt.generate_password_hash(plaintext)
 
     def __repr__(self):

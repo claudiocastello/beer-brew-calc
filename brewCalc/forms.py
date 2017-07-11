@@ -2,7 +2,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SelectField, DateField
 from wtforms.validators import DataRequired, EqualTo, Email, Optional, Length
 from wtforms.fields.html5 import EmailField
-from brewCalc.models import FIELD_MAX_LIM
+
+from .models import FIELD_MAX_LIM
 
 
 # User related forms:

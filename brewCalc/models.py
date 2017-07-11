@@ -1,6 +1,8 @@
 from sqlalchemy.ext.hybrid import hybrid_property
-from brewCalc import app, db, bcrypt
-from datetime import date
+
+from . import app, db, bcrypt
+
+import datetime
 
 FIELD_MAX_LIM = {
     'user': 128,
@@ -19,10 +21,12 @@ class User(db.Model):
     user = db.Column(db.String(FIELD_MAX_LIM['user']), unique=True, nullable=False)
     _password = db.Column(db.LargeBinary(FIELD_MAX_LIM['password']), nullable=False)
     email = db.Column(db.String(FIELD_MAX_LIM['email']), nullable=False)
-    role = db.Column(db.String(FIELD_MAX_LIM['role']), nullable=False)
+    role = db.Column(db.String(FIELD_MAX_LIM['role']), nullable=False, default='user')
     first_name = db.Column(db.String(FIELD_MAX_LIM['first_name']), nullable=False)
     last_name = db.Column(db.String(FIELD_MAX_LIM['last_name']), nullable=False)
     locale = db.Column(db.String(FIELD_MAX_LIM['locale']), default='pt_BR')
+    email_confirmed = db.Column(db.Boolean, nullable=False, default=False)
+
 
     @property
     def is_authenticated(self):

@@ -7,28 +7,10 @@ from flask_login import login_user, logout_user, login_required, current_user
 from wtforms import PasswordField
 
 ## App Imports ##
-from brewCalc import app, db, login_manager
-from brewCalc.forms import LoginForm, CreateForm, EditForm, RecoverForm, DeleteProfileForm
-from brewCalc.models import User
-
-## Other Imports ##
-from functools import wraps
-
-## Required roles function
-def required_roles(*roles):
-    def wrapper(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            if current_user.role not in roles:
-                return redirect(url_for('index'))
-            return f(*args, **kwargs)
-        return wrapped
-    return wrapper
-
-## Login manager
-@login_manager.user_loader
-def load_user(user):
-    return User.query.filter_by(user=user).first()
+from . import app, db, login_manager
+from .forms import LoginForm, CreateForm, EditForm, RecoverForm, DeleteProfileForm
+from .models import User
+from .utils import required_roles, load_user, send_confirm_email, confirmed_email
 
 
 
@@ -71,12 +53,24 @@ def create():
             user = User(user=form.user.data, password=form.password.data, email=form.email.data, role='user', first_name=form.first_name.data, last_name=form.last_name.data)
             db.session.add(user)
             db.session.commit()
-            flash('New account created!', 'success')
+            send_confirm_email(user)
+            print('after mail')
+            flash('New account created! You will receive a confirmation email.', 'success')
             return redirect(url_for('login'))
         else:
             flash('Username already taken. Choose another one.', 'error')
     return render_template('create.html', form=form)
 
+
+@app.route('/activate/<token>', methods=['GET', 'POST'])
+def activate(token):
+    email = confirmed_email(token)
+    user = User.query.filter_by(email=email).first_or_404()
+    user.email_confirmed = True
+    db.session.add(user)
+    db.session.commit()
+    return redirect(url_for('login'))
+    
 
 @app.route('/delete-profile', methods=['GET', 'POST'])
 @login_required
@@ -120,7 +114,7 @@ def profile():
             flash('Saved', 'success')
         else:
             flash('Incorret password', 'error')
-    return render_template('profile.html', form=form)
+    return render_template('profile.html', form=form, user=user)
 
 
 ## Recover user and reset password

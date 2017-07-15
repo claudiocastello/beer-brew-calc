@@ -18,7 +18,7 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = "Insert your username to access this page."
+login_manager.login_message = "Insert your username or email to access this page."
 
 # wtforms CSRF protection
 csrf = CSRFProtect(app)

@@ -8,7 +8,7 @@ from .models import FIELD_MAX_LIM
 
 # User related forms:
 class LoginForm(FlaskForm):
-    user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username'})
+    user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username or email'})
     password = PasswordField('Password', validators=[DataRequired(message='Insert your password')], description={'placeholder': 'Password'})
     remember_me = BooleanField('Remember', default=False)
 
@@ -21,6 +21,8 @@ class CreateForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(message='Insert your first name'), Length(max=(FIELD_MAX_LIM['first_name']))], description={'placeholder': 'First name'})
     last_name = StringField('Last Name', validators=[DataRequired(message='Insert your last name'), Length(max=(FIELD_MAX_LIM['last_name']))], description={'placeholder': 'Last name'})
 
+class ResendConfirmForm(FlaskForm):
+    pass
 
 class DeleteProfileForm(FlaskForm):
     user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username'})
@@ -29,8 +31,13 @@ class DeleteProfileForm(FlaskForm):
     confirm_delete = BooleanField('Check to confirm profile exclusion', default=False)
  
 
-class RecoverForm(FlaskForm):
+class SendEmailResetForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(message='Insert your email')], description={'placeholder': 'Email'})
+
+
+class ResetPasswordForm(FlaskForm):
+    new_password = PasswordField('New Password', validators=[EqualTo('confirm_new', message='Passwords must match'), Length(min=4, max=(FIELD_MAX_LIM['password'])), Optional()],description={'placeholder': 'New password'})
+    confirm_new = PasswordField('confirm_new', description={'placeholder': 'Repeat password'})
 
 
 class EditForm(FlaskForm):

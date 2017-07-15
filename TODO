@@ -1,3 +1,6 @@
-- implement resend confirmation email feature
-- review code and debug
+- test, review code and debug
 - write some documentation
+
+Done:
+- implement resend confirmation email feature
+- create generic send email function to avoid duplication

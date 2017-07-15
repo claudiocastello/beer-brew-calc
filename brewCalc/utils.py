@@ -48,28 +48,12 @@ def load_user(user):
 ###
 ts = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
-def send_confirm_email(user):
-    token = ts.dumps(user.email, salt=app.config['RECOVER_EMAIL_SALT'])
-    confirm_url = url_for('activate', token=token, _external=True)
-    subject = 'BrewCalc App Email Confirmation'
-    html = render_template('confirm-email.html', first_name=user.first_name, last_name=user.last_name, confirm_url=confirm_url)
-    mail.send_email(subject=subject, to_email=[{'email': user.email}], html=html)
 
-
-def send_reset_email(user):
-    token = ts.dumps(user.email, salt=app.config['RECOVER_EMAIL_SALT'])
-    reset_url = url_for('reset_with_token', token=token, _external=True)
-    subject = 'Passoword reset requested'
-    html = render_template('reset-password-email.html', first_name=user.first_name, last_name=user.last_name, reset_url=reset_url)
-    mail.send_email(subject=subject, to_email=[{'email': user.email}], html=html)
-
-
-def send_change_email(user):
-    token = ts.dumps(user.unconfirmed_email, salt=app.config['RECOVER_EMAIL_SALT'])
-    change_url = url_for('email_change', token=token, _external=True)
-    subject = 'Email Change Confirmation'
-    html = render_template('confirm-email-change.html', first_name=user.first_name, last_name=user.last_name, change_url=change_url)
-    mail.send_email(subject=subject, to_email=[{'email': user.email}], html=html)
+def send_email_generic(user, user_email, url, subject, template_to_render):
+    token = ts.dumps(user_email, salt=app.config['RECOVER_EMAIL_SALT'])
+    validation_url = url_for(url, token=token, _external=True)
+    html = render_template(template_to_render, first_name=user.first_name, last_name=user.last_name, validation_url=validation_url)
+    mail.send_email(subject=subject, to_email=[{'email': user_email}], html=html)
 
 
 def confirmed_email(token):

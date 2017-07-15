@@ -10,7 +10,7 @@ from wtforms import PasswordField
 from . import app, db, login_manager
 from .forms import LoginForm, CreateForm, EditForm, SendEmailResetForm, ResendConfirmForm, ResetPasswordForm, DeleteProfileForm
 from .models import User
-from .utils import required_roles, load_user, send_confirm_email, confirmed_email, check_confirmed, send_reset_email, send_change_email
+from .utils import required_roles, load_user, send_email_generic, confirmed_email, check_confirmed
 
 
 ##
@@ -68,7 +68,7 @@ def create():
                             first_name=form.first_name.data, last_name=form.last_name.data, unconfirmed_email=form.email.data)
                 db.session.add(user)
                 db.session.commit()
-                send_confirm_email(user)
+                send_email_generic(user, user.email, 'activate', 'BrewCalc App Email Confirmation', 'confirm-email.html')
                 flash('New account created! You will receive a confirmation email.', 'success')
                 return redirect(url_for('login'))
             else:
@@ -104,7 +104,7 @@ def user_unconfirmed():
 @login_required
 def resend_confirmation():
     user = current_user
-    send_confirm_email(user)
+    send_email_generic(user, user.email, 'activate', 'BrewCalc App Email Confirmation', 'confirm-email.html')
     flash('You will receive a new confirmation email.', 'success')
     return redirect(url_for('logout'))
     
@@ -122,7 +122,7 @@ def reset_password():
         user = User.query.filter_by(email=form.email.data).first()
         if user:
             if user.email_confirmed == True:
-                send_reset_email(user)
+                send_email_generic(user, user.email, 'reset_with_token', 'Passoword reset requested', 'reset-password-email.html')
                 flash('A message was sent to your email with instructions.', 'success')
                 return redirect(url_for('index'))
             else:
@@ -138,13 +138,13 @@ def reset_with_token(token):
     email = confirmed_email(token)
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=email).first_or_404()
+        user = User.query.filter_by(email=email).first()
         user.set_new_password(form.new_password.data)
         db.session.add(user)
         db.session.commit()
         return redirect(url_for('login'))
-    return render_template('reset-new-password.html', form=form)
-
+    print(5)
+    return render_template('reset-new-password.html', form=form, token=token)
 
 
 ##
@@ -165,8 +165,8 @@ def profile():
             if form.email.data != user.email:
                 if User.query.filter_by(email=form.email.data).first() is None:
                     user.unconfirmed_email = form.email.data
-                    send_change_email(user)
-                    flash('You need to confirm your new email address. A message was sent with instructions.')
+                    send_email_generic(user, user.unconfirmed_email, 'email_change', 'Email Change Confirmation', 'confirm-email-change.html')
+                    flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
                 else:
                     flash('This email address is already in use by another user. Choose another one.', 'error')
             if form.new_password.data != '' and form.new_password != None:
@@ -182,7 +182,7 @@ def profile():
 @app.route('/email-change/<token>', methods=['GET', 'POST'])
 def email_change(token):
     email = confirmed_email(token)
-    user = User.query.filter_by(email=email).first_or_404()
+    user = User.query.filter_by(unconfirmed_email=email).first_or_404()
     user.email = email
     user.unconfirmed_email = None
     db.session.add(user)

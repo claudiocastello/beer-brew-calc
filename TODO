@@ -1,6 +1,9 @@
-- test, review code and debug
+- implement social network login
+- test, review code and debug (when not To Do???)
 - write some documentation
 
 Done:
 - implement resend confirmation email feature
 - create generic send email function to avoid duplication
+- implement 'unauthorized_email_change' view to revert an unauthorized email change.
+- change 'email_change' and 'unauthorized_email_change' to avoid duplication.

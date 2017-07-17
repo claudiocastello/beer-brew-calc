@@ -104,7 +104,9 @@ def user_unconfirmed():
 @login_required
 def resend_confirmation():
     user = current_user
-    send_email_generic(user, user.email, 'activate', 'BrewCalc App Email Confirmation', 'confirm-email.html')
+    print(user, user.email)
+    send_email_generic(user, user.email, 'activate', 'BrewCalc App New Email Confirmation', 'confirm-email.html')
+    print('email sent')
     flash('You will receive a new confirmation email.', 'success')
     return redirect(url_for('logout'))
     
@@ -142,8 +144,8 @@ def reset_with_token(token):
         user.set_new_password(form.new_password.data)
         db.session.add(user)
         db.session.commit()
+        flash('Your password was redefined.', 'success')
         return redirect(url_for('login'))
-    print(5)
     return render_template('reset-new-password.html', form=form, token=token)
 
 
@@ -165,6 +167,7 @@ def profile():
             if form.email.data != user.email:
                 if User.query.filter_by(email=form.email.data).first() is None:
                     user.unconfirmed_email = form.email.data
+                    send_email_generic(user, user.email, 'unauthorized_email_change', 'Email Change Requested', 'unauthorized-change.html')
                     send_email_generic(user, user.unconfirmed_email, 'email_change', 'Email Change Confirmation', 'confirm-email-change.html')
                     flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
                 else:
@@ -181,12 +184,30 @@ def profile():
 ## Email Change
 @app.route('/email-change/<token>', methods=['GET', 'POST'])
 def email_change(token):
-    email = confirmed_email(token)
-    user = User.query.filter_by(unconfirmed_email=email).first_or_404()
-    user.email = email
+    new_email = confirmed_email(token)
+    user = User.query.filter_by(unconfirmed_email=email).first()
+    if user is None:
+        flash('This email change is not authorized! Create a new profile for yourself', 'error')
+        return redirect(url_for('create'))
+    user.unconfirmed_email = user.get_email()
+    user.email = new_email
+    db.session.add(user)
+    db.session.commit()
+    flash('Email changed successfully.')
+    return redirect(url_for('login'))
+
+## Unauthorized Email Change
+@app.route('/unauthorized-change/<token>', methods=['GET', 'POST'])
+def unauthorized_email_change(token):
+    old_email = confirmed_email(token)
+    user = User.query.filter_by(email=old_email).first()
+    if user is None: # user will be None if the email was changed by email_change view.
+        user = User.query.filter_by(unconfirmed_email=email).first()
+    user.email = old_email
     user.unconfirmed_email = None
     db.session.add(user)
     db.session.commit()
+    flash('Your email address was not changed.', 'success')
     return redirect(url_for('login'))
 
 
@@ -210,7 +231,7 @@ def delete_profile():
                     else:
                         flash('Check to confirm profile exclusion', 'error')
                 else:
-                    flash('Incorrect email adress', 'error')
+                    flash('Incorrect email address', 'error')
             else:
                 flash('Incorrect username', 'error')
         else:

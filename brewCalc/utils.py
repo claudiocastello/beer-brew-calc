@@ -61,5 +61,5 @@ def confirmed_email(token):
         email = ts.loads(token, salt=app.config['RECOVER_EMAIL_SALT'], max_age=86400)
         return email
     except:
-        return abort(404)
+        return None
 

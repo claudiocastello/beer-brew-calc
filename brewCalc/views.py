@@ -167,7 +167,7 @@ def profile():
             if form.email.data != user.email:
                 if User.query.filter_by(email=form.email.data).first() is None:
                     user.unconfirmed_email = form.email.data
-                    send_email_generic(user, user.email, 'unauthorized_email_change', 'Email Change Requested', 'unauthorized-change.html')
+                    # arguments of send_email_generic(user, user_email, url, subject, template_to_render)
                     send_email_generic(user, user.unconfirmed_email, 'email_change', 'Email Change Confirmation', 'confirm-email-change.html')
                     flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
                 else:
@@ -185,10 +185,12 @@ def profile():
 @app.route('/email-change/<token>', methods=['GET', 'POST'])
 def email_change(token):
     new_email = confirmed_email(token)
-    user = User.query.filter_by(unconfirmed_email=email).first()
+    user = User.query.filter_by(unconfirmed_email=new_email).first()
     if user is None:
         flash('This email change is not authorized! Create a new profile for yourself', 'error')
         return redirect(url_for('create'))
+    # email change requested and confirmed with new email address; send email to old email address to revert changes in case of fraud.
+    send_email_generic(user, user.email, 'unauthorized_email_change', 'Email Change Requested', 'unauthorized-change.html')
     user.unconfirmed_email = user.get_email()
     user.email = new_email
     db.session.add(user)
@@ -202,7 +204,7 @@ def unauthorized_email_change(token):
     old_email = confirmed_email(token)
     user = User.query.filter_by(email=old_email).first()
     if user is None: # user will be None if the email was changed by email_change view.
-        user = User.query.filter_by(unconfirmed_email=email).first()
+        user = User.query.filter_by(unconfirmed_email=old_email).first()
     user.email = old_email
     user.unconfirmed_email = None
     db.session.add(user)

@@ -2,14 +2,14 @@
 ## Author: Claudio Castello
 
 ## Flask Imports ##
-from flask import request, abort, render_template, redirect, url_for, flash
+from flask import request, abort, render_template, redirect, url_for, flash, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
 ## App Imports ##
 from . import app, db, login_manager
 from .forms import LoginForm, CreateForm, EditForm, SendEmailResetForm, ResendConfirmForm, ResetPasswordForm, DeleteProfileForm
 from .models import User
-from .utils import required_roles, send_email_generic, confirmed_email, check_confirmed
+from .utils import required_roles, send_email_generic, confirmed_email, check_confirmed, google
 
 
 ##
@@ -23,6 +23,10 @@ def index():
     Checks if there is a authenticated user and render index.html if True
     If False, redirects to 'login'
     '''
+    # if 'google_token' in session:
+        # me = google.get('userinfo')
+        # return jsonify({"data": me.data})
+        
     if current_user.is_authenticated:
         return render_template('index.html')
     return redirect(url_for('login'))
@@ -53,6 +57,47 @@ def login():
         else:
             flash('Incorrect username/email or password', 'error')
     return render_template('login.html', form=form)
+
+
+##########################################################################################
+#################################### Google Login ########################################
+##########################################################################################
+
+## Under construction ##
+
+@app.route('/google-login')
+def google_login():
+    return google.authorize(callback=url_for('authorized', _external=True))
+
+
+@app.route('/google-logout')
+def logout():
+    session.pop('google_token', None)
+    return redirect(url_for('index'))
+
+
+@app.route(app.config['REDIRECT_URI'])
+def authorized():
+    resp = google.authorized_response()
+    if resp is None:
+        return 'Access denied: reason=%s error=%s' % (
+            request.args['error_reason'],
+            request.args['error_description']
+        )
+    session['google_token'] = (resp['access_token'], '')
+    me = google.get('userinfo')
+    print(me.data['given_name'])
+    return jsonify({"data": me.data})
+
+
+@google.tokengetter
+def get_google_oauth_token():
+    return session.get('google_token')
+
+##########################################################################################
+##########################################################################################
+##########################################################################################
+
 
 ## Logout
 @app.route('/logout')

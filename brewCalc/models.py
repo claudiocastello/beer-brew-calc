@@ -19,7 +19,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user = db.Column(db.String(FIELD_MAX_LIM['user']), unique=True, nullable=False)
-    _password = db.Column(db.LargeBinary(FIELD_MAX_LIM['password']), nullable=False)
+    _password = db.Column(db.LargeBinary(FIELD_MAX_LIM['password']), nullable=True)
     email = db.Column(db.String(FIELD_MAX_LIM['email']), nullable=False)
     unconfirmed_email = db.Column(db.String(FIELD_MAX_LIM['email']), nullable=True, default=None)
     role = db.Column(db.String(FIELD_MAX_LIM['role']), nullable=False, default='user')
@@ -27,6 +27,11 @@ class User(db.Model):
     last_name = db.Column(db.String(FIELD_MAX_LIM['last_name']), nullable=False)
     locale = db.Column(db.String(FIELD_MAX_LIM['locale']), default='pt_BR')
     email_confirmed = db.Column(db.Boolean, nullable=False, default=False)
+
+    ## Google UserInfo
+    isGoogleUser = db.Column(db.Boolean, nullable=False, default=False)
+    googleID = db.Column(db.String(), unique=True, nullable=True, default=None)
+
 
 
     @property

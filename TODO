@@ -1,4 +1,5 @@
-- implement social network login
+- finish implementation of social network login (Facebook, Twitter)
+- change views to suit social network login (profile deletion, reset password, email change)
 
 
 Done:
@@ -7,3 +8,4 @@ Done:
 - implement 'unauthorized_email_change' view to revert an unauthorized email change.
 - change 'email_change' and 'unauthorized_email_change' to avoid duplication.
 - implemented confirm email deletion.
+- implemented login with Google account.

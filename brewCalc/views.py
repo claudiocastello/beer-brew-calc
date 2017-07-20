@@ -23,10 +23,7 @@ def index():
     Checks if there is a authenticated user and render index.html if True
     If False, redirects to 'login'
     '''
-    # if 'google_token' in session:
-        # me = google.get('userinfo')
-        # return jsonify({"data": me.data})
-        
+
     if current_user.is_authenticated:
         return render_template('index.html')
     return redirect(url_for('login'))
@@ -48,6 +45,9 @@ def login():
         # The if/else below just checks if user is trying to login with the username or email.
         if '@' in form.user.data:
             user = User.query.filter_by(email=form.user.data).first()
+            if user.isGoogleUser:
+                flash('Use your Google Account (link below) to login.', 'error')
+                return redirect(url_for('login'))
         else:
             user = User.query.filter_by(user=form.user.data).first()
 
@@ -67,11 +67,27 @@ def login():
 
 @app.route('/google-login')
 def google_login():
+    if 'google_token' in session:
+        google_user_info = google.get('userinfo')
+        user = User.query.filter_by(email=google_user_info.data['email']).first()
+        if user is None:
+            user = User(user=google_user_info.data['email'], 
+                        email=google_user_info.data['email'], 
+                        role='user', 
+                        first_name=google_user_info.data['given_name'], 
+                        last_name=google_user_info.data['family_name'], 
+                        email_confirmed=True,
+                        isGoogleUser=True,
+                        googleID=google_user_info.data['id'])
+            db.session.add(user)
+            db.session.commit()
+        login_user(user)
+        return redirect(url_for('index'))
     return google.authorize(callback=url_for('authorized', _external=True))
 
 
 @app.route('/google-logout')
-def logout():
+def google_logout():
     session.pop('google_token', None)
     return redirect(url_for('index'))
 
@@ -85,9 +101,7 @@ def authorized():
             request.args['error_description']
         )
     session['google_token'] = (resp['access_token'], '')
-    me = google.get('userinfo')
-    print(me.data['given_name'])
-    return jsonify({"data": me.data})
+    return redirect(url_for('google_login'))
 
 
 @google.tokengetter
@@ -105,6 +119,8 @@ def logout():
     '''
     Simply log out the current user.
     '''
+    if 'google_token' in session:
+        session.pop('google_token', None)
     logout_user()
     return redirect(url_for('index'))
 
@@ -139,6 +155,7 @@ def create():
         else:
             flash('Username already taken. Choose another one.', 'error')
     return render_template('create.html', form=form)
+
 
 ## Confirm New User
 @app.route('/activate/<token>', methods=['GET', 'POST'])

@@ -9,7 +9,7 @@ from .models import FIELD_MAX_LIM
 # User related forms:
 class LoginForm(FlaskForm):
     user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username or email'})
-    password = PasswordField('Password', validators=[DataRequired(message='Insert your password')], description={'placeholder': 'Password'})
+    password = PasswordField('Password', description={'placeholder': 'Password'})
     remember_me = BooleanField('Remember', default=False)
 
 

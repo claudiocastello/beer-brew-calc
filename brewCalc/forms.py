@@ -48,5 +48,9 @@ class EditForm(FlaskForm):
     new_password = PasswordField('New Password', validators=[EqualTo('confirm_new', message='Passwords must match'), Length(min=4, max=(FIELD_MAX_LIM['password'])), Optional()],description={'placeholder': 'New password'})
     confirm_new = PasswordField('confirm_new', description={'placeholder': 'Repeat password'})
 
+class EditFormSocial(FlaskForm):
+    first_name = StringField('First Name', validators=[DataRequired(message='First name can not be blank'), Length(max=(FIELD_MAX_LIM['first_name']))], description={'placeholder': 'First name'})
+    last_name = StringField('Last Name', validators=[DataRequired(message='Last name can not be blank'), Length(max=(FIELD_MAX_LIM['last_name']))], description={'placeholder': 'Last name'})
+
 
 # Recipe related forms:

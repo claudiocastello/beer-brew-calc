@@ -7,7 +7,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 ## App Imports ##
 from . import app, db, login_manager
-from .forms import LoginForm, CreateForm, EditForm, SendEmailResetForm, ResendConfirmForm, ResetPasswordForm, DeleteProfileForm
+from .forms import LoginForm, CreateForm, EditForm, EditFormSocial, SendEmailResetForm, ResendConfirmForm, ResetPasswordForm, DeleteProfileForm
 from .models import User
 from .utils import required_roles, send_email_generic, confirmed_email, check_confirmed, google
 
@@ -62,8 +62,6 @@ def login():
 ##########################################################################################
 #################################### Google Login ########################################
 ##########################################################################################
-
-## Under construction ##
 
 @app.route('/google-login')
 def google_login():
@@ -151,6 +149,9 @@ def create():
                 flash('New account created! You will receive a confirmation email.', 'success')
                 return redirect(url_for('login'))
             else:
+                if User.query.filter_by(email=form.email.data).first().isGoogleUser:
+                    flash('Try to log in with your Google Account!', 'error')
+                    return redirect(url_for('login'))
                 flash('Email address already in our database. Please use another email to proceed.', 'error')
         else:
             flash('Username already taken. Choose another one.', 'error')
@@ -228,6 +229,9 @@ def reset_password():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user:
+            if user.isGoogleUser:
+                flash('Try to log in with your Google Account!', 'error')
+                return redirect(url_for('login'))
             if user.email_confirmed == True:
                 # Users can send an email requesting a reset in their password; only confirmed users are able to do this.
                 send_email_generic(user, user.email, 'reset_with_token', 'Passoword reset requested', 'reset-password-email.html')
@@ -283,34 +287,42 @@ def profile():
     a email confirmation. In any case is necessary to provide the current password in order to save
     changes.
     '''
-    # Get current user and pass as object to EditForm class in the instantiation,
+    # Get current user and pass as object to EditForm or EditFormSocial classes in the instantiation,
     # providing form fields with pre-loaded information about the user.
     user = current_user
-    form = EditForm(obj=user)
-    if form.validate_on_submit():
-        if user.is_password_correct(form.old_password.data):
-            # First name and last name will be updated even if not changed
+    if user.isGoogleUser:
+        form = EditFormSocial(obj=user)
+        if form.validate_on_submit():
             user.first_name = form.first_name.data
             user.last_name = form.last_name.data
-            # If email provided by user in the form is different from email in database,
-            # this new email adress will be saved in user.unconfirmed_email and a message
-            # will be sent to user in order to confirm this new email address.
-            if form.email.data != user.email:
-                # New email address provided couldn't be in use by another user.
-                if User.query.filter_by(email=form.email.data).first() is None:
-                    user.unconfirmed_email = form.email.data
-                    send_email_generic(user, user.unconfirmed_email, 'email_change', 'Email Change Confirmation', 'confirm-email-change.html')
-                    flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
-                else:
-                    flash('This email address is already in use by another user. Choose another one.', 'error')
-            # Password fields aren empty by default and if different of None or empty string set_new_password()
-            # method is called with data from form passed as argument (see User Class at models.py)
-            if form.new_password.data != '' and form.new_password != None:
-                user.set_new_password(form.new_password.data) # Refer to User class in models.py to see this method implementation.
             db.session.commit()
             flash('Saved', 'success')
-        else:
-            flash('Incorret password', 'error')
+    else:
+        form = EditForm(obj=user)
+        if form.validate_on_submit():
+            if user.is_password_correct(form.old_password.data):
+                # First name and last name will be updated even if not changed
+                user.first_name = form.first_name.data
+                user.last_name = form.last_name.data
+                # If email provided by user in the form is different from email in database,
+                # this new email adress will be saved in user.unconfirmed_email and a message
+                # will be sent to user in order to confirm this new email address.
+                if form.email.data != user.email:
+                    # New email address provided couldn't be in use by another user.
+                    if User.query.filter_by(email=form.email.data).first() is None:
+                        user.unconfirmed_email = form.email.data
+                        send_email_generic(user, user.unconfirmed_email, 'email_change', 'Email Change Confirmation', 'confirm-email-change.html')
+                        flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
+                    else:
+                        flash('This email address is already in use by another user. Choose another one.', 'error')
+                # Password fields are empty by default and if different of None or empty string set_new_password()
+                # method is called with data from form passed as argument (see User Class at models.py)
+                if form.new_password.data != '' and form.new_password != None:
+                    user.set_new_password(form.new_password.data) # Refer to User class in models.py to see this method implementation.
+                db.session.commit()
+                flash('Saved', 'success')
+            else:
+                flash('Incorret password', 'error')
     return render_template('profile.html', form=form, user=user)
 
 

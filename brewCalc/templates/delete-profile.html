@@ -4,10 +4,12 @@
   {{ show_flashes() }}
   <form class="form-signin" action="{{ url_for('delete_profile') }}" method="POST">
     <h2 class="form-signin-heading">Delete Profile</h2>
-    <p>You need to confirm your username, email and password to delete your profile</p>
-    {{ render_bootstrap_field(form.user) }}
+    <p>You need to confirm some data to delete your profile</p>
     {{ render_bootstrap_field(form.email) }}
+    {% if not user.isGoogleUser %}
+    {{ render_bootstrap_field(form.user) }}    
     {{ render_bootstrap_field(form.password) }}
+    {% endif %}
     {{ render_bootstrap_field(form.confirm_delete) }}
     {{ form.csrf_token }}
     <button class="btn btn-lg btn-danger btn-block" type="submit">Delete Profile</button>

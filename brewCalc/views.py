@@ -7,9 +7,13 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 ## App Imports ##
 from . import app, db, login_manager
-from .forms import LoginForm, CreateForm, EditForm, EditFormSocial, SendEmailResetForm, ResendConfirmForm, ResetPasswordForm, DeleteProfileForm
+from .forms import (LoginForm, CreateForm, EditForm, EditFormSocial,
+                    SendEmailResetForm, ResendConfirmForm, ResetPasswordForm,
+                    DeleteProfileForm, DeleteProfileFormSocial)
 from .models import User
-from .utils import required_roles, send_email_generic, confirmed_email, check_confirmed, google
+from .utils import (required_roles, send_email_generic, confirmed_email,
+                    check_confirmed, google, edit_profile_generic,
+                    delete_profile_generic)
 
 
 ##
@@ -20,7 +24,7 @@ from .utils import required_roles, send_email_generic, confirmed_email, check_co
 @check_confirmed
 def index():
     '''
-    Checks if there is a authenticated user and render index.html if True
+    Checks if there is an authenticated user and render index.html if True
     If False, redirects to 'login'
     '''
 
@@ -42,10 +46,11 @@ def login():
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
-        # The if/else below just checks if user is trying to login with the username or email.
+        # The if/else below checks if user is trying to login with the username or email.
         if '@' in form.user.data:
             user = User.query.filter_by(email=form.user.data).first()
-            if user.isGoogleUser:
+            # If user registered with Google the app ask him to log through Google authentication.
+            if user and user.isGoogleUser:
                 flash('Use your Google Account (link below) to login.', 'error')
                 return redirect(url_for('login'))
         else:
@@ -65,9 +70,17 @@ def login():
 
 @app.route('/google-login')
 def google_login():
+    '''
+    Checks if there is a google_token in session and log user in.
+    '''
+    # Check if there is a Google Token in session
     if 'google_token' in session:
+        # If there is, get Google user info and query User by user email.
         google_user_info = google.get('userinfo')
         user = User.query.filter_by(email=google_user_info.data['email']).first()
+        # If user is not found, create a new user with Google userinfo.
+        # There is no confirmation email for the user in this case (email_confirmed = True).
+        # isGoogle user is set to True
         if user is None:
             user = User(user=google_user_info.data['email'], 
                         email=google_user_info.data['email'], 
@@ -79,19 +92,29 @@ def google_login():
                         googleID=google_user_info.data['id'])
             db.session.add(user)
             db.session.commit()
+        # if user is found or created, log the user in and redirects to 'index'
         login_user(user)
         return redirect(url_for('index'))
+    # If there is not a Google Token in session, redirects to 'authorized' to get
+    # user authorization to use Google account and log in.
     return google.authorize(callback=url_for('authorized', _external=True))
 
 
 @app.route('/google-logout')
 def google_logout():
+    '''
+    Pop google_token from session. Trying to figure out when to use.
+    '''
     session.pop('google_token', None)
     return redirect(url_for('index'))
 
 
 @app.route(app.config['REDIRECT_URI'])
 def authorized():
+    '''
+    Request user authorization to use Google account
+    to create user and/or login with it in the app.
+    '''
     resp = google.authorized_response()
     if resp is None:
         return 'Access denied: reason=%s error=%s' % (
@@ -115,10 +138,9 @@ def get_google_oauth_token():
 @app.route('/logout')
 def logout():
     '''
-    Simply log out the current user.
+    Simply clear session and log out the current user.
     '''
-    if 'google_token' in session:
-        session.pop('google_token', None)
+    session.clear()
     logout_user()
     return redirect(url_for('index'))
 
@@ -130,7 +152,7 @@ def logout():
 @app.route('/create', methods=['GET', 'POST'])
 def create():
     '''
-    This view creates a new user profile.
+    This view creates a new user profile. Not used when user choose to login with Google.
     '''
     form = CreateForm()
     if form.validate_on_submit():
@@ -141,11 +163,19 @@ def create():
                 # If username and email are available, create the new user and send email for confirmation.
                 # By default the role will be 'user' and 'confirmed_email' will be False (see models.py).
                 # 'confirmed_email' = False do not allow user to navigate and keep asking for confirming email.
-                user = User(user=form.user.data, password=form.password.data, email=form.email.data, role='user', 
-                            first_name=form.first_name.data, last_name=form.last_name.data, unconfirmed_email=form.email.data)
+                user = User(user=form.user.data,
+                            password=form.password.data, 
+                            email=form.email.data, role='user', 
+                            first_name=form.first_name.data, 
+                            last_name=form.last_name.data, 
+                            unconfirmed_email=form.email.data)
                 db.session.add(user)
                 db.session.commit()
-                send_email_generic(user, user.email, 'activate', 'BrewCalc App Email Confirmation', 'confirm-email.html')
+                send_email_generic(user=user,
+                                   user_email=user.email, 
+                                   action_url='activate', 
+                                   email_subject='BrewCalc App Email Confirmation', 
+                                   message_template='confirm-email.html')
                 flash('New account created! You will receive a confirmation email.', 'success')
                 return redirect(url_for('login'))
             else:
@@ -201,18 +231,20 @@ def user_unconfirmed():
 @login_required
 def resend_confirmation():
     '''
-    If for some reason the users didn't receive the first confirmation email this view
-    allows them to click a button and resend the confirmation message to the registered email.
-    It's not possible to change the email address as it is not confirmed.
+    If for some reason the users didn't receive the first confirmation email  or the this view
+    token is expired allows them to click a button and resend the confirmation message to the
+    registered email. It's not possible to change the email address as it is not confirmed.
     '''
     user = current_user
     print(user, user.email)
-    send_email_generic(user, user.email, 'activate', 'BrewCalc App New Email Confirmation', 'confirm-email.html')
-    print('email sent')
+    send_email_generic(user=user,
+                       user_email=user.email, 
+                       action_url='activate', 
+                       email_subject='BrewCalc App New Email Confirmation', 
+                       message_template='confirm-email.html')
     flash('You will receive a new confirmation email.', 'success')
     return redirect(url_for('logout'))
     
-
 
 ##
 ## Reset password
@@ -224,17 +256,24 @@ def reset_password():
     '''
     This view provide users with a reset password tool and
     only confirmed users can request this password reset.
+    Users who logged in with Google are not able to reset password
+    as they don't have one.
     '''
     form = SendEmailResetForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user:
+            # If users logged in with Google they can't reset password.
             if user.isGoogleUser:
                 flash('Try to log in with your Google Account!', 'error')
                 return redirect(url_for('login'))
             if user.email_confirmed == True:
                 # Users can send an email requesting a reset in their password; only confirmed users are able to do this.
-                send_email_generic(user, user.email, 'reset_with_token', 'Passoword reset requested', 'reset-password-email.html')
+                send_email_generic(user=user,
+                                   user_email=user.email, 
+                                   action_url='reset_with_token', 
+                                   email_subject='Password Reset Requested', 
+                                   message_template='reset-password-email.html')
                 flash('A message was sent to your email with instructions.', 'success')
                 return redirect(url_for('index'))
             else:
@@ -284,8 +323,10 @@ def profile():
     '''
     This view allow users to edit their profiles. It's possible to change first_name, last_name,
     and password straight from the form. If users wants to change email address it will be necessary
-    a email confirmation. In any case is necessary to provide the current password in order to save
+    an email confirmation. In any case is necessary to provide the current password in order to save
     changes.
+
+    If user logged in with Google it is only possible to change first_name and last_name.
     '''
     # Get current user and pass as object to EditForm or EditFormSocial classes in the instantiation,
     # providing form fields with pre-loaded information about the user.
@@ -293,34 +334,18 @@ def profile():
     if user.isGoogleUser:
         form = EditFormSocial(obj=user)
         if form.validate_on_submit():
-            user.first_name = form.first_name.data
-            user.last_name = form.last_name.data
-            db.session.commit()
-            flash('Saved', 'success')
+            edit_profile_generic(user=user, 
+                                 first_name=form.first_name.data, 
+                                 last_name=form.last_name.data)
     else:
         form = EditForm(obj=user)
         if form.validate_on_submit():
             if user.is_password_correct(form.old_password.data):
-                # First name and last name will be updated even if not changed
-                user.first_name = form.first_name.data
-                user.last_name = form.last_name.data
-                # If email provided by user in the form is different from email in database,
-                # this new email adress will be saved in user.unconfirmed_email and a message
-                # will be sent to user in order to confirm this new email address.
-                if form.email.data != user.email:
-                    # New email address provided couldn't be in use by another user.
-                    if User.query.filter_by(email=form.email.data).first() is None:
-                        user.unconfirmed_email = form.email.data
-                        send_email_generic(user, user.unconfirmed_email, 'email_change', 'Email Change Confirmation', 'confirm-email-change.html')
-                        flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
-                    else:
-                        flash('This email address is already in use by another user. Choose another one.', 'error')
-                # Password fields are empty by default and if different of None or empty string set_new_password()
-                # method is called with data from form passed as argument (see User Class at models.py)
-                if form.new_password.data != '' and form.new_password != None:
-                    user.set_new_password(form.new_password.data) # Refer to User class in models.py to see this method implementation.
-                db.session.commit()
-                flash('Saved', 'success')
+                edit_profile_generic(user=user, 
+                                     first_name=form.first_name.data, 
+                                     last_name=form.last_name.data, 
+                                     email=form.email.data, 
+                                     new_password=form.new_password.data)
             else:
                 flash('Incorret password', 'error')
     return render_template('profile.html', form=form, user=user)
@@ -332,6 +357,7 @@ def email_change(token):
     '''
     This view confirms the email change request and stores the old email
     address as an unconfirmed_email in case user wants to revert the change.
+    Only available for users who didn't log in with Google.
     '''
     # New user email is retrieved by passing the token to confirmed_email function (see utils.py)
     # If wrong or expired token, email = None
@@ -348,7 +374,11 @@ def email_change(token):
     # A new email is sent to old email address to revert changes in case of fraud.
     # This new email, if link clicked, made user.unconfirmed_email = None and set user.email
     # to the old email address, cancelling changes and avoiding unauthorized email changes.
-    send_email_generic(user, user.email, 'unauthorized_email_change', 'Email Change Requested', 'unauthorized-change.html')
+    send_email_generic(user=user, 
+                       email=user.email, 
+                       action_url='unauthorized_email_change', 
+                       email_subject='Email Change Requested', 
+                       message_template='unauthorized-change.html')
     # The unconfirmed email is set to the old email address
     # and user.email is set to the new email address.
     user.unconfirmed_email = user.get_email()
@@ -395,28 +425,41 @@ def delete_profile():
     This view simply checks username, email, password and a checkbox
     before deleting an user profile. These steps exist only to ensure
     the users really want to delete their profiles.
+
+    If users logged in with Google, the view checks only email adress
+    and if checkbox is checked.
     '''
-    form = DeleteProfileForm()
     user = current_user
+    delete_requested = False
+
+    # Check if is a Google user or not to intantiate the correct form
+    # and define is_password_correct and username variables.
+    if user.isGoogleUser:
+        form = DeleteProfileFormSocial()
+        is_password_correct = True
+        username = form.email.data
+    else:
+        form = DeleteProfileForm()
+        is_password_correct = user.is_password_correct(form.password.data)
+        username = form.user.data
+    # If form is validated calls delete_profile_generic() to request
+    # profile deletion (see utils.py for this function defeinition)
     if form.validate_on_submit():
-        if user.is_password_correct(form.password.data):
-            if user.get_id() == form.user.data:
-                if user.get_email() == form.email.data:
-                    if form.confirm_delete.data:
-                        send_email_generic(user, user.email, 'confirm_delete_user', 'Delete Profile Request', 'delete-profile-email.html')
-                        flash('An email was sent to the registered email to confirm profile exclusion.', 'success')                        
-                        logout_user()
-                        return redirect(url_for('index'))
-                    else:
-                        flash('Check to confirm profile exclusion', 'error')
-                else:
-                    flash('Incorrect email address', 'error')
-            else:
-                flash('Incorrect username', 'error')
+        if is_password_correct:
+            delete_requested = delete_profile_generic(user=user,
+                                                      username=username,
+                                                      user_email=form.email.data,
+                                                      checked_box=form.confirm_delete.data)
         else:
             flash('Incorrect password', 'error')
-    return render_template('delete-profile.html', form=form)
-
+    # If all fields are correct delete_profile_generic() will send email
+    # for profile deletion confirmation and return True. The user is logged
+    # out and redirected to index'.
+    if delete_requested:
+        flash('You will receive an email to confirm profile deletion', 'success')
+        logout_user()
+        return redirect(url_for('index'))
+    return render_template('delete-profile.html', form=form, user=user)
 
 ## Confirm Delete Profile
 @app.route('/confirm-delete/<token>', methods=['GET', 'POST'])

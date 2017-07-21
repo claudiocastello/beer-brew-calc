@@ -2,7 +2,7 @@ from flask_login import current_user
 from flask import render_template, url_for, abort, flash, redirect
 from itsdangerous import URLSafeTimedSerializer
 
-from . import app, mail, login_manager, oauth
+from . import app, db, mail, login_manager, oauth
 from .models import User
 
 from functools import wraps
@@ -84,16 +84,16 @@ google = oauth.remote_app(
 ts = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 
-def send_email_generic(user, user_email, url, subject, template_to_render):
+def send_email_generic(user, user_email, action_url, email_subject, message_template):
     '''
-    This function is used to send an email to users with a tokenized URL (/url/<token>)
+    This function is used to send an email to users with a tokenized URL (/action_url/<token>)
     for email verification purposes. The function takes as arguments the user object,
     user_email, url of verification, email subject and the template to render as message.
     '''
     token = ts.dumps(user_email, salt=app.config['RECOVER_EMAIL_SALT'])
-    validation_url = url_for(url, token=token, _external=True)
-    html = render_template(template_to_render, first_name=user.first_name, last_name=user.last_name, validation_url=validation_url)
-    mail.send_email(subject=subject, to_email=[{'email': user_email}], html=html)
+    validation_url = url_for(action_url, token=token, _external=True)
+    html = render_template(message_template, first_name=user.first_name, last_name=user.last_name, validation_url=validation_url)
+    mail.send_email(subject=email_subject, to_email=[{'email': user_email}], html=html)
 
 
 def confirmed_email(token):
@@ -107,3 +107,69 @@ def confirmed_email(token):
     except:
         return None
 
+
+
+##
+## Edit Profile Generic
+##
+def edit_profile_generic(user, first_name, last_name, email=None, new_password=None):
+    '''
+    After implementing Google login this function replaced direct profile changes
+    in views.py in order to avoid duplication of code. It changes user profile info
+    according to user request.
+    '''
+    # Users first_name and last_name will be updated even if not changed.
+    user.first_name = first_name
+    user.last_name = last_name
+    # Checks if email is not None (users must have a valid email address) and 
+    # different from user current email to avoid requesting email change incorrectly.
+    if email is not None and email != user.email:
+        # Query database to check if the chosen email is not in use already.
+        # If the pevious check was not done the app will find the user email
+        # in database and incorrectly flash a message about it.
+        if User.query.filter_by(email=email).first() is None:
+            # Sets unconfirmed_email to the user new email.
+            user.unconfirmed_email = email
+            send_email_generic(user=user, 
+                               user_email=user.unconfirmed_email, 
+                               action_url='email_change', 
+                               email_subject='Email Change Confirmation', 
+                               message_template='confirm-email-change.html')
+            flash('You need to confirm your new email address. A message was sent with instructions.', 'success')
+        else:
+            flash('This email address is already in use by another user. Choose another one.', 'error')
+    # Check if the new passoword is not an empty string
+    # or None and set it using set_new_password() method
+    if new_password != '' and new_password is not None:
+        user.set_new_password(new_password)
+    db.session.commit()
+    flash('Saved', 'success')
+
+
+##
+## Delete Profile Generic
+##
+def delete_profile_generic(user, username, user_email, checked_box):
+    '''
+    After implementing Google login this function replaced direct profile deletion
+    in views.py in order to avoid duplication of code. It checks for user data
+    confirmation before sending the confirmation email to delete profile.
+    '''
+    if user.get_email() == user_email:
+        if user.get_id() == username:
+            if checked_box:
+                send_email_generic(user=user, 
+                                   user_email=user.email, 
+                                   action_url='confirm_delete_user', 
+                                   email_subject='Delete Profile Request', 
+                                   message_template='delete-profile-email.html')
+                return True
+            else:
+                flash('Check to confirm profile exclusion', 'error')
+                return False
+        else:
+            flash('Incorrect username address', 'error')
+            return False
+    else:
+        flash('Incorrect email address', 'error')
+        return False

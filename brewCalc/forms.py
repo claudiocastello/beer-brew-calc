@@ -25,8 +25,18 @@ class ResendConfirmForm(FlaskForm):
     pass
 
 class DeleteProfileForm(FlaskForm):
+    '''
+    Delete Form class for user profiles NOT LINKED with Google, Facebook or Twitter.
+    '''
     user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username'})
     password = PasswordField('Password', validators=[DataRequired(message='Insert your password')], description={'placeholder': 'Password'})
+    email = StringField('Email', validators=[DataRequired(message='Insert your email'), Email(message='Invalid email address format.')], description={'placeholder': 'Email'})
+    confirm_delete = BooleanField('Check to confirm profile exclusion', default=False)
+
+class DeleteProfileFormSocial(FlaskForm):
+    '''
+    Delete Form class for user profiles LINKED with Google, Facebook or Twitter.
+    '''
     email = StringField('Email', validators=[DataRequired(message='Insert your email'), Email(message='Invalid email address format.')], description={'placeholder': 'Email'})
     confirm_delete = BooleanField('Check to confirm profile exclusion', default=False)
  
@@ -41,6 +51,9 @@ class ResetPasswordForm(FlaskForm):
 
 
 class EditForm(FlaskForm):
+    '''
+    Edit Form class for user profiles NOT LINKED with Google, Facebook or Twitter.
+    '''
     first_name = StringField('First Name', validators=[DataRequired(message='First name can not be blank'), Length(max=(FIELD_MAX_LIM['first_name']))], description={'placeholder': 'First name'})
     last_name = StringField('Last Name', validators=[DataRequired(message='Last name can not be blank'), Length(max=(FIELD_MAX_LIM['last_name']))], description={'placeholder': 'Last name'})
     email = StringField('Email', validators=[DataRequired(message='Email can not be blank'), Email(message='Invalid email address format.'), Length(max=(FIELD_MAX_LIM['email']))], description={'placeholder': 'Email'})
@@ -49,6 +62,9 @@ class EditForm(FlaskForm):
     confirm_new = PasswordField('confirm_new', description={'placeholder': 'Repeat password'})
 
 class EditFormSocial(FlaskForm):
+    '''
+    Edit Form class for user profiles LINKED with Google, Facebook or Twitter.
+    '''
     first_name = StringField('First Name', validators=[DataRequired(message='First name can not be blank'), Length(max=(FIELD_MAX_LIM['first_name']))], description={'placeholder': 'First name'})
     last_name = StringField('Last Name', validators=[DataRequired(message='Last name can not be blank'), Length(max=(FIELD_MAX_LIM['last_name']))], description={'placeholder': 'Last name'})
 

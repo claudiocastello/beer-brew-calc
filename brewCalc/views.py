@@ -12,7 +12,7 @@ from .forms import (LoginForm, CreateForm, EditForm, EditFormSocial,
                     DeleteProfileForm, DeleteProfileFormSocial)
 from .models import User
 from .utils import (required_roles, send_email_generic, confirmed_email,
-                    check_confirmed, google, edit_profile_generic,
+                    check_confirmed, google, facebook, edit_profile_generic,
                     delete_profile_generic)
 
 
@@ -128,6 +128,40 @@ def authorized():
 @google.tokengetter
 def get_google_oauth_token():
     return session.get('google_token')
+
+##########################################################################################
+##########################################################################################
+##########################################################################################
+
+
+##########################################################################################
+################################### Facebook Login #######################################
+##########################################################################################
+
+@app.route('/facebook-login')
+def facebook_login():
+    return facebook.authorize(callback=url_for('facebook_authorized',
+        next=request.args.get('next') or request.referrer or None,
+        _external=True))
+
+
+@app.route('/login/authorized')
+@facebook.authorized_handler
+def facebook_authorized(resp):
+    if resp is None:
+        return 'Access denied: reason=%s error=%s' % (
+            request.args['error_reason'],
+            request.args['error_description']
+        )
+    session['facebook_token'] = (resp['access_token'], '')
+    user = facebook.get('/user')
+    return 'Logged in as id=%s name=%s redirect=%s' % \
+        (user.data['id'], user.data['name'], request.args.get('next'))
+
+
+@facebook.tokengetter
+def get_facebook_oauth_token():
+    return session.get('facebook_token')
 
 ##########################################################################################
 ##########################################################################################

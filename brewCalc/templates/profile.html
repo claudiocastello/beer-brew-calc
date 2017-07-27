@@ -8,7 +8,7 @@
     {{ render_bootstrap_field(form.first_name) }}
     <p>Last Name</p>
     {{ render_bootstrap_field(form.last_name) }}
-    {% if not user.isGoogleUser %}
+    {% if (social == False) %}
     <p>Email</p>
     {{ render_bootstrap_field(form.email) }} <br>
     <p>Change Password?</p>

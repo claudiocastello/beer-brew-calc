@@ -15,6 +15,7 @@ from .utils import (required_roles, send_email_generic, confirmed_email,
                     check_confirmed, google, facebook, edit_profile_generic,
                     delete_profile_generic)
 
+import facebook as facebook_graphAPI
 
 ##
 ## Index
@@ -140,9 +141,29 @@ def get_google_oauth_token():
 
 @app.route('/facebook-login')
 def facebook_login():
+    if 'facebook_token' in session:
+        facebook_user_info = facebook.get('me')
+        user = User.query.filter_by(facebookID=facebook_user_info.data['id']).first()
+        if user is None:
+            first_name = facebook_user_info.data['name'].split(' ')[0]
+            last_name = facebook_user_info.data['name'].split(' ')[-1]
+            facebookID = facebook_user_info.data['id']
+            email = first_name+facebookID+'@'+'facebook.com' # Mock email as I couldn't retrieve user Facebook email yet...
+            user = User(user=last_name+facebookID, 
+                        email=email, 
+                        role='user', 
+                        first_name=first_name, 
+                        last_name=last_name, 
+                        email_confirmed=True,
+                        isFacebookUser=True,
+                        facebookID=facebookID)
+            db.session.add(user)
+            db.session.commit()
+        login_user(user)
+        return redirect(url_for('index'))
     return facebook.authorize(callback=url_for('facebook_authorized',
-        next=request.args.get('next') or request.referrer or None,
-        _external=True))
+                              next=request.args.get('next') or request.referrer or None,
+                              _external=True))
 
 
 @app.route('/login/authorized')
@@ -154,9 +175,7 @@ def facebook_authorized(resp):
             request.args['error_description']
         )
     session['facebook_token'] = (resp['access_token'], '')
-    user = facebook.get('/user')
-    return 'Logged in as id=%s name=%s redirect=%s' % \
-        (user.data['id'], user.data['name'], request.args.get('next'))
+    return redirect(url_for('facebook_login'))
 
 
 @facebook.tokengetter
@@ -297,9 +316,9 @@ def reset_password():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user:
-            # If users logged in with Google they can't reset password.
-            if user.isGoogleUser:
-                flash('Try to log in with your Google Account!', 'error')
+            # If users logged in with Google/Facebook they can't reset password.
+            if user.isGoogleUser or user.isFacebookUser:
+                flash('Try to log in with your Google/Facebook Account!', 'error')
                 return redirect(url_for('login'))
             if user.email_confirmed == True:
                 # Users can send an email requesting a reset in their password; only confirmed users are able to do this.
@@ -365,7 +384,9 @@ def profile():
     # Get current user and pass as object to EditForm or EditFormSocial classes in the instantiation,
     # providing form fields with pre-loaded information about the user.
     user = current_user
-    if user.isGoogleUser:
+    social = False
+    if user.isGoogleUser or user.isFacebookUser:
+        social = True
         form = EditFormSocial(obj=user)
         if form.validate_on_submit():
             edit_profile_generic(user=user, 
@@ -382,7 +403,7 @@ def profile():
                                      new_password=form.new_password.data)
             else:
                 flash('Incorret password', 'error')
-    return render_template('profile.html', form=form, user=user)
+    return render_template('profile.html', form=form, user=user, social=social)
 
 
 ## Email Change

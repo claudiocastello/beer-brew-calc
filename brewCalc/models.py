@@ -32,6 +32,10 @@ class User(db.Model):
     isGoogleUser = db.Column(db.Boolean, nullable=False, default=False)
     googleID = db.Column(db.String(), unique=True, nullable=True, default=None)
 
+    ## Facebook UserInfo
+    isFacebookUser = db.Column(db.Boolean, nullable=False, default=False)
+    facebookID = db.Column(db.String(), unique=True, nullable=True, default=None)
+
 
 
     @property

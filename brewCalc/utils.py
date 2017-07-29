@@ -122,7 +122,7 @@ def confirmed_email(token):
 ##
 ## Edit Profile Generic
 ##
-def edit_profile_generic(user, first_name, last_name, email=None, new_password=None):
+def edit_profile_generic(user, first_name, last_name, email, new_password):
     '''
     After implementing Google login this function replaced direct profile changes
     in views.py in order to avoid duplication of code. It changes user profile info
@@ -168,6 +168,10 @@ def delete_profile_generic(user, username, user_email, checked_box):
     if user.get_email() == user_email:
         if user.get_id() == username:
             if checked_box:
+                if user.isFacebookUser:
+                    db.session.delete(user)
+                    db.session.commit()
+                    return True
                 send_email_generic(user=user, 
                                    user_email=user.email, 
                                    action_url='confirm_delete_user', 

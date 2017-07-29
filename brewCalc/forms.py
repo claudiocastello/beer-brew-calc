@@ -28,16 +28,15 @@ class DeleteProfileForm(FlaskForm):
     '''
     Delete Form class for user profiles NOT LINKED with Google, Facebook or Twitter.
     '''
-    user = StringField('User', validators=[DataRequired(message='Insert your username')], description={'placeholder': 'Username'})
-    password = PasswordField('Password', validators=[DataRequired(message='Insert your password')], description={'placeholder': 'Password'})
-    email = StringField('Email', validators=[DataRequired(message='Insert your email'), Email(message='Invalid email address format.')], description={'placeholder': 'Email'})
+    user = StringField('User', validators=[DataRequired(message='Confirm your username')], description={'placeholder': 'Confirm your username'})
+    password = PasswordField('Password', validators=[DataRequired(message='Confirm your password')], description={'placeholder': 'Confirm your password'})
+    email = StringField('Email', validators=[DataRequired(message='Confirm your email'), Email(message='Invalid email address format.')], description={'placeholder': 'Confirm yout email'})
     confirm_delete = BooleanField('Check to confirm profile exclusion', default=False)
 
 class DeleteProfileFormSocial(FlaskForm):
     '''
     Delete Form class for user profiles LINKED with Google, Facebook or Twitter.
     '''
-    email = StringField('Email', validators=[DataRequired(message='Insert your email'), Email(message='Invalid email address format.')], description={'placeholder': 'Email'})
     confirm_delete = BooleanField('Check to confirm profile exclusion', default=False)
  
 

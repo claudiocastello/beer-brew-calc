@@ -36,6 +36,9 @@ class User(db.Model):
     isFacebookUser = db.Column(db.Boolean, nullable=False, default=False)
     facebookID = db.Column(db.String(), unique=True, nullable=True, default=None)
 
+    ## Twitter UserInfo
+    isTwitterUser = db.Column(db.Boolean, nullable=False, default=False)
+    twitterID = db.Column(db.String(), unique=True, nullable=True, default=None)
 
 
     @property

@@ -1,13 +1,17 @@
 - finish implementation of social network login (Twitter)
-- check views for bugs related to Facebook login
 - change views to suit social network login (profile deletion, reset password, email change)
+- create an Admin panel with Flask-Admin
+- change database to PostgreSQL
+- deploy app to Heroku and test it live
+- work on beer brewing calculations
 
 
 Done:
 - implement resend confirmation email feature
 - create generic send email function to avoid duplication
-- implement 'unauthorized_email_change' view to revert an unauthorized email change.
-- change 'email_change' and 'unauthorized_email_change' to avoid duplication.
-- implemented confirm email deletion.
-- implemented login with Google account.
+- implement 'unauthorized_email_change' view to revert an unauthorized email change
+- change 'email_change' and 'unauthorized_email_change' to avoid duplication
+- implemented confirm email deletion
+- implemented login with Google account
 - implemented login with Facebook account
+- fixed some problems with profile deletion after Facebook login implementation

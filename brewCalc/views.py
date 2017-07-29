@@ -134,7 +134,6 @@ def get_google_oauth_token():
 ##########################################################################################
 ##########################################################################################
 
-
 ##########################################################################################
 ################################### Facebook Login #######################################
 ##########################################################################################
@@ -186,6 +185,15 @@ def get_facebook_oauth_token():
 ##########################################################################################
 ##########################################################################################
 
+##########################################################################################
+################################### Twitter Login ########################################
+##########################################################################################
+
+# Code goes here
+
+##########################################################################################
+##########################################################################################
+##########################################################################################
 
 ## Logout
 @app.route('/logout')
@@ -379,30 +387,44 @@ def profile():
     an email confirmation. In any case is necessary to provide the current password in order to save
     changes.
 
-    If user logged in with Google it is only possible to change first_name and last_name.
+    If user logged in with Google/Facebook it is only possible to change first_name and last_name.
     '''
     # Get current user and pass as object to EditForm or EditFormSocial classes in the instantiation,
     # providing form fields with pre-loaded information about the user.
     user = current_user
+    # Define the 'social' variable to False to render all fields in profile.html
+    # when user's not logged with Google/Facebook
     social = False
     if user.isGoogleUser or user.isFacebookUser:
+        # If user logged with Google/Facebook social = True and template will be
+        # rendered only with first name and last name fields (see templates/profile.html)
+        # User do not have password and is_password_correct is set to True
+        # new_email and new_password are set to None because user is not able to change
+        # these properties and utils.py will go through the right path.
         social = True
         form = EditFormSocial(obj=user)
-        if form.validate_on_submit():
+        is_password_correct = True
+        new_email = None
+        new_password = None
+    else:
+        # In case users are not logged with Facebook/Google they need to type their
+        # password to save changes.
+        # new_email and new_password, if provided, are get from form fields.
+        form = EditForm(obj=user)
+        is_password_correct = user.is_password_correct(form.old_password.data)
+        new_email = form.email.data
+        new_password = form.new_password.data
+
+    # Validate form on submit and pass arguments to edit_profile_generic (see utils.py)
+    if form.validate_on_submit():
+        if is_password_correct:
             edit_profile_generic(user=user, 
                                  first_name=form.first_name.data, 
-                                 last_name=form.last_name.data)
-    else:
-        form = EditForm(obj=user)
-        if form.validate_on_submit():
-            if user.is_password_correct(form.old_password.data):
-                edit_profile_generic(user=user, 
-                                     first_name=form.first_name.data, 
-                                     last_name=form.last_name.data, 
-                                     email=form.email.data, 
-                                     new_password=form.new_password.data)
-            else:
-                flash('Incorret password', 'error')
+                                 last_name=form.last_name.data, 
+                                 email=new_email, 
+                                 new_password=new_password)
+        else:
+            flash('Incorret password', 'error')
     return render_template('profile.html', form=form, user=user, social=social)
 
 
@@ -412,7 +434,7 @@ def email_change(token):
     '''
     This view confirms the email change request and stores the old email
     address as an unconfirmed_email in case user wants to revert the change.
-    Only available for users who didn't log in with Google.
+    Only available for users who didn't log in with Google/Facebook.
     '''
     # New user email is retrieved by passing the token to confirmed_email function (see utils.py)
     # If wrong or expired token, email = None
@@ -481,40 +503,45 @@ def delete_profile():
     before deleting an user profile. These steps exist only to ensure
     the users really want to delete their profiles.
 
-    If users logged in with Google, the view checks only email adress
-    and if checkbox is checked.
+    If users logged in with Google/Facebook, the view only checks if checkbox is checked.
     '''
     user = current_user
     delete_requested = False
+    social = False
 
-    # Check if is a Google user or not to intantiate the correct form
-    # and define is_password_correct and username variables.
-    if user.isGoogleUser:
+    # Check if is a Google/Facebook user or not to instantiate the correct form
+    # and define is_password_correct and social variables.
+    if user.isGoogleUser or user.isFacebookUser:
         form = DeleteProfileFormSocial()
         is_password_correct = True
-        username = form.email.data
+        social = True
+        username = user.user
+        user_email = user.email
     else:
         form = DeleteProfileForm()
         is_password_correct = user.is_password_correct(form.password.data)
         username = form.user.data
+        user_email = form.email.data
     # If form is validated calls delete_profile_generic() to request
     # profile deletion (see utils.py for this function defeinition)
     if form.validate_on_submit():
         if is_password_correct:
             delete_requested = delete_profile_generic(user=user,
                                                       username=username,
-                                                      user_email=form.email.data,
+                                                      user_email=user_email,
                                                       checked_box=form.confirm_delete.data)
         else:
             flash('Incorrect password', 'error')
     # If all fields are correct delete_profile_generic() will send email
     # for profile deletion confirmation and return True. The user is logged
-    # out and redirected to index'.
+    # out and redirected to index'. Users logged with Facebook will not get
+    # this confirmation email and Profile will be deleted immediatelly.
     if delete_requested:
-        flash('You will receive an email to confirm profile deletion', 'success')
+        flash('You will receive an email to confirm profile deletion (no email for users logged with Facebook)', 'success')
         logout_user()
         return redirect(url_for('index'))
-    return render_template('delete-profile.html', form=form, user=user)
+    return render_template('delete-profile.html', form=form, user=user, social=social)
+
 
 ## Confirm Delete Profile
 @app.route('/confirm-delete/<token>', methods=['GET', 'POST'])

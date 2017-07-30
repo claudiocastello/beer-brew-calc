@@ -1,5 +1,3 @@
-- finish implementation of social network login (Twitter)
-- change views to suit social network login (profile deletion, reset password, email change)
 - create an Admin panel with Flask-Admin
 - change database to PostgreSQL
 - deploy app to Heroku and test it live
@@ -15,3 +13,5 @@ Done:
 - implemented login with Google account
 - implemented login with Facebook account
 - fixed some problems with profile deletion after Facebook login implementation
+- finish implementation of social network login (Twitter)
+- change views to suit social network login (profile deletion, reset password, email change)

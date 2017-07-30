@@ -1,5 +1,6 @@
 from flask_login import current_user
 from flask import render_template, url_for, abort, flash, redirect
+
 from itsdangerous import URLSafeTimedSerializer
 
 from . import app, db, mail, login_manager, oauth
@@ -180,7 +181,7 @@ def delete_profile_generic(user, username, user_email, checked_box):
     if user.get_email() == user_email:
         if user.get_id() == username:
             if checked_box:
-                if user.isFacebookUser:
+                if user.isFacebookUser or user.isTwitterUser:
                     db.session.delete(user)
                     db.session.commit()
                     return True

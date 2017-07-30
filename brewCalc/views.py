@@ -145,8 +145,8 @@ def facebook_login():
             first_name = facebook_user_info.data['name'].split(' ')[0]
             last_name = facebook_user_info.data['name'].split(' ')[-1]
             facebookID = facebook_user_info.data['id']
-            email = first_name + facebookID + '@facebook.com' # Mock email as I couldn't retrieve user Facebook email yet...
-            user = User(user=last_name+facebookID, 
+            email = first_name+facebookID+'@'+'facebook.com' # Mock email as I couldn't retrieve user Facebook email yet...
+            user = User(user=first_name+facebookID, 
                         email=email, 
                         role='user', 
                         first_name=first_name, 
@@ -163,7 +163,7 @@ def facebook_login():
                               _external=True))
 
 
-@app.route('/facebook-authorized')
+@app.route('/login/authorized')
 @facebook.authorized_handler
 def facebook_authorized(resp):
     if resp is None:
@@ -191,13 +191,13 @@ def get_facebook_oauth_token():
 def twitter_login():
     if 'twitter_token' in session:
         twitter_user_info = session['twitter_token']
-        user = User.query.filter_by(twitterID=twitter_user_info.data['user_id']).first()
+        user = User.query.filter_by(twitterID=twitter_user_info['user_id']).first()
         if user is None:
-            first_name = twitter_user_info.data['screen_name']
+            first_name = twitter_user_info['screen_name']
             last_name = 'TwitterUser'
-            twitterID = twitter_user_info.data['user_id']
+            twitterID = twitter_user_info['user_id']
             email = first_name + twitterID + '@twitter.com' # Mock email...
-            user = User(user=last_name+twitterID, 
+            user = User(user=first_name + twitterID, 
                         email=email, 
                         role='user', 
                         first_name=first_name, 
@@ -554,7 +554,7 @@ def delete_profile():
 
     # Check if is a Google/Facebook user or not to instantiate the correct form
     # and define is_password_correct and social variables.
-    if user.isGoogleUser or user.isFacebookUser or isTwitterUser:
+    if user.isGoogleUser or user.isFacebookUser or user.isTwitterUser:
         form = DeleteProfileFormSocial()
         is_password_correct = True
         social = True

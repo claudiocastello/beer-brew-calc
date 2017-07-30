@@ -83,6 +83,18 @@ facebook = oauth.remote_app('facebook',
                             request_token_params={'scope': 'email'})
 
 
+##
+## Twitter Login
+##
+twitter = oauth.remote_app('twitter',
+                           consumer_key=app.config.get('TWITTER_API_KEY'),
+                           consumer_secret=app.config.get('TWITTER_API_SECRET'),
+                           base_url='https://api.twitter.com/1.1/',
+                           request_token_url='https://api.twitter.com/oauth/request_token',
+                           access_token_url='https://api.twitter.com/oauth/access_token',
+                           authorize_url='https://api.twitter.com/oauth/authorize')
+
+
 
 ###
 ### Send Confirmation Email

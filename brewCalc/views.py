@@ -2,7 +2,7 @@
 ## Author: Claudio Castello
 
 ## Flask Imports ##
-from flask import request, abort, render_template, redirect, url_for, flash, session, jsonify
+from flask import request, abort, render_template, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 
 ## App Imports ##
@@ -12,10 +12,8 @@ from .forms import (LoginForm, CreateForm, EditForm, EditFormSocial,
                     DeleteProfileForm, DeleteProfileFormSocial)
 from .models import User
 from .utils import (required_roles, send_email_generic, confirmed_email,
-                    check_confirmed, google, facebook, edit_profile_generic,
-                    delete_profile_generic)
-
-import facebook as facebook_graphAPI
+                    check_confirmed, google, facebook, twitter,
+                    edit_profile_generic, delete_profile_generic)
 
 ##
 ## Index
@@ -98,7 +96,7 @@ def google_login():
         return redirect(url_for('index'))
     # If there is not a Google Token in session, redirects to 'authorized' to get
     # user authorization to use Google account and log in.
-    return google.authorize(callback=url_for('authorized', _external=True))
+    return google.authorize(callback=url_for('google_authorized', _external=True))
 
 
 @app.route('/google-logout')
@@ -110,8 +108,8 @@ def google_logout():
     return redirect(url_for('index'))
 
 
-@app.route(app.config['REDIRECT_URI'])
-def authorized():
+@app.route('/oauth2callback')
+def google_authorized():
     '''
     Request user authorization to use Google account
     to create user and/or login with it in the app.
@@ -147,7 +145,7 @@ def facebook_login():
             first_name = facebook_user_info.data['name'].split(' ')[0]
             last_name = facebook_user_info.data['name'].split(' ')[-1]
             facebookID = facebook_user_info.data['id']
-            email = first_name+facebookID+'@'+'facebook.com' # Mock email as I couldn't retrieve user Facebook email yet...
+            email = first_name + facebookID + '@facebook.com' # Mock email as I couldn't retrieve user Facebook email yet...
             user = User(user=last_name+facebookID, 
                         email=email, 
                         role='user', 
@@ -165,7 +163,7 @@ def facebook_login():
                               _external=True))
 
 
-@app.route('/login/authorized')
+@app.route('/facebook-authorized')
 @facebook.authorized_handler
 def facebook_authorized(resp):
     if resp is None:
@@ -189,7 +187,52 @@ def get_facebook_oauth_token():
 ################################### Twitter Login ########################################
 ##########################################################################################
 
-# Code goes here
+@app.route('/twitter-login')
+def twitter_login():
+    if 'twitter_token' in session:
+        twitter_user_info = session['twitter_token']
+        user = User.query.filter_by(twitterID=twitter_user_info.data['user_id']).first()
+        if user is None:
+            first_name = twitter_user_info.data['screen_name']
+            last_name = 'TwitterUser'
+            twitterID = twitter_user_info.data['user_id']
+            email = first_name + twitterID + '@twitter.com' # Mock email...
+            user = User(user=last_name+twitterID, 
+                        email=email, 
+                        role='user', 
+                        first_name=first_name, 
+                        last_name=last_name, 
+                        email_confirmed=True,
+                        isTwitterUser=True,
+                        twitterID=twitterID)
+            db.session.add(user)
+            db.session.commit()
+        login_user(user)
+        return redirect(url_for('index'))
+    return twitter.authorize(callback=url_for('twitter_authorized',
+                             next=request.args.get('next') or request.referrer or None,
+                             _external=True))
+
+
+@app.route('/twitter-authorized')
+def twitter_authorized():
+    resp = twitter.authorized_response()
+    if resp is None:
+        flash('You denied access to sign in!', 'error')
+    else:
+        session['twitter_token'] = resp
+    return redirect(url_for('twitter_login'))
+
+
+@twitter.tokengetter
+def get_twitter_oauth_token():
+    return session.get('twitter_oauth')
+
+
+@app.route('/twitter-logout')
+def twitter_logout():
+    session.pop('twitter_oauth', None)
+    return redirect(url_for('index'))
 
 ##########################################################################################
 ##########################################################################################
@@ -325,7 +368,7 @@ def reset_password():
         user = User.query.filter_by(email=form.email.data).first()
         if user:
             # If users logged in with Google/Facebook they can't reset password.
-            if user.isGoogleUser or user.isFacebookUser:
+            if user.isGoogleUser or user.isFacebookUser or user.isTwitterUser:
                 flash('Try to log in with your Google/Facebook Account!', 'error')
                 return redirect(url_for('login'))
             if user.email_confirmed == True:
@@ -395,8 +438,8 @@ def profile():
     # Define the 'social' variable to False to render all fields in profile.html
     # when user's not logged with Google/Facebook
     social = False
-    if user.isGoogleUser or user.isFacebookUser:
-        # If user logged with Google/Facebook social = True and template will be
+    if user.isGoogleUser or user.isFacebookUser or user.isTwitterUser:
+        # If user logged with Google/Facebook/Twitter, social = True and template will be
         # rendered only with first name and last name fields (see templates/profile.html)
         # User do not have password and is_password_correct is set to True
         # new_email and new_password are set to None because user is not able to change
@@ -511,7 +554,7 @@ def delete_profile():
 
     # Check if is a Google/Facebook user or not to instantiate the correct form
     # and define is_password_correct and social variables.
-    if user.isGoogleUser or user.isFacebookUser:
+    if user.isGoogleUser or user.isFacebookUser or isTwitterUser:
         form = DeleteProfileFormSocial()
         is_password_correct = True
         social = True
@@ -537,7 +580,7 @@ def delete_profile():
     # out and redirected to index'. Users logged with Facebook will not get
     # this confirmation email and Profile will be deleted immediatelly.
     if delete_requested:
-        flash('You will receive an email to confirm profile deletion (no email for users logged with Facebook)', 'success')
+        flash('You will receive an email to confirm profile deletion (no email for users logged with Facebook/Twitter)', 'success')
         logout_user()
         return redirect(url_for('index'))
     return render_template('delete-profile.html', form=form, user=user, social=social)

@@ -454,12 +454,13 @@ def profile():
         # password to save changes.
         # new_email and new_password, if provided, are get from form fields.
         form = EditForm(obj=user)
-        is_password_correct = user.is_password_correct(form.old_password.data)
         new_email = form.email.data
         new_password = form.new_password.data
 
     # Validate form on submit and pass arguments to edit_profile_generic (see utils.py)
     if form.validate_on_submit():
+        if not social:
+            is_password_correct = user.is_password_correct(form.old_password.data)
         if is_password_correct:
             edit_profile_generic(user=user, 
                                  first_name=form.first_name.data, 

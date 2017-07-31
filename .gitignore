@@ -1,3 +1,5 @@
 brewCalc/__pycache__/
 app.env
 brewCalc/brewcalc.db
+Procfile.txt
+runtime.txt

@@ -5,6 +5,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_bcrypt import Bcrypt
 from flask_sendgrid import SendGrid
 from flask_oauthlib.client import OAuth
+from flask_admin import Admin
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -29,5 +30,8 @@ mail = SendGrid(app)
 
 # OAuth
 oauth = OAuth(app)
+
+# Flask-Admin
+admin = Admin(app, name='brewCalc', template_mode='bootstrap3')
 
 import brewCalc.views

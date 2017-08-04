@@ -6,7 +6,7 @@ from flask import request, abort, render_template, redirect, url_for, flash, ses
 from flask_login import login_user, logout_user, login_required, current_user
 
 ## App Imports ##
-from . import app, db, login_manager
+from . import app, db, login_manager, admin
 from .forms import (LoginForm, CreateForm, EditForm, EditFormSocial,
                     SendEmailResetForm, ResendConfirmForm, ResetPasswordForm,
                     DeleteProfileForm, DeleteProfileFormSocial)
@@ -14,6 +14,10 @@ from .models import User
 from .utils import (required_roles, send_email_generic, confirmed_email,
                     check_confirmed, google, facebook, twitter,
                     edit_profile_generic, delete_profile_generic)
+
+# Flask-Admin
+from flask_admin.contrib.sqla import ModelView
+admin.add_view(ModelView(User, db.session))
 
 ##
 ## Index
@@ -79,7 +83,7 @@ def google_login():
         user = User.query.filter_by(email=google_user_info.data['email']).first()
         # If user is not found, create a new user with Google userinfo.
         # There is no confirmation email for the user in this case (email_confirmed = True).
-        # isGoogle user is set to True
+        # isGoogleUser is set to True
         if user is None:
             user = User(user=google_user_info.data['email'], 
                         email=google_user_info.data['email'], 
@@ -136,11 +140,21 @@ def get_google_oauth_token():
 ################################### Facebook Login #######################################
 ##########################################################################################
 
+# Views here follows the same principles of Google login.
+
 @app.route('/facebook-login')
 def facebook_login():
+    '''
+    Checks if there is a facebook_token in session and log user in.
+    '''
+    # Check if there is a Facebook Token in session
     if 'facebook_token' in session:
+        # If there is, get Facebook user info and query User by user facebookID.
         facebook_user_info = facebook.get('me')
         user = User.query.filter_by(facebookID=facebook_user_info.data['id']).first()
+        # If user is not found, create a new user with Facebook userinfo.
+        # There is no confirmation email for the user in this case (email_confirmed = True).
+        # isFacebookUser is set to True
         if user is None:
             first_name = facebook_user_info.data['name'].split(' ')[0]
             last_name = facebook_user_info.data['name'].split(' ')[-1]
@@ -156,8 +170,11 @@ def facebook_login():
                         facebookID=facebookID)
             db.session.add(user)
             db.session.commit()
+        # if user is found or created, log the user in and redirects to 'index'
         login_user(user)
         return redirect(url_for('index'))
+    # If there is not a Facebook Token in session, redirects to 'facebook_authorized' to get
+    # user authorization to use Facebook account and log in.
     return facebook.authorize(callback=url_for('facebook_authorized',
                               next=request.args.get('next') or request.referrer or None,
                               _external=True))
@@ -166,6 +183,10 @@ def facebook_login():
 @app.route('/login/authorized')
 @facebook.authorized_handler
 def facebook_authorized(resp):
+    '''
+    Request user authorization to use Facebook account
+    to create user and/or login with it in the app.
+    '''
     if resp is None:
         return 'Access denied: reason=%s error=%s' % (
             request.args['error_reason'],
@@ -189,9 +210,17 @@ def get_facebook_oauth_token():
 
 @app.route('/twitter-login')
 def twitter_login():
+    '''
+    Checks if there is a twitter_token in session and log user in.
+    '''
+    # Check if there is a Twitter Token in session
     if 'twitter_token' in session:
+        # If there is, get Facebook user info and query User by user twitterID.
         twitter_user_info = session['twitter_token']
         user = User.query.filter_by(twitterID=twitter_user_info['user_id']).first()
+        # If user is not found, create a new user with Twitter userinfo.
+        # There is no confirmation email for the user in this case (email_confirmed = True).
+        # isTwitterUser is set to True
         if user is None:
             first_name = twitter_user_info['screen_name']
             last_name = 'TwitterUser'
@@ -207,8 +236,11 @@ def twitter_login():
                         twitterID=twitterID)
             db.session.add(user)
             db.session.commit()
+        # if user is found or created, log the user in and redirects to 'index'
         login_user(user)
         return redirect(url_for('index'))
+    # If there is not a Twitter Token in session, redirects to 'twitter_authorized' to get
+    # user authorization to use Twitter account and log in.
     return twitter.authorize(callback=url_for('twitter_authorized',
                              next=request.args.get('next') or request.referrer or None,
                              _external=True))
@@ -216,6 +248,10 @@ def twitter_login():
 
 @app.route('/twitter-authorized')
 def twitter_authorized():
+    '''
+    Request user authorization to use Facebook account
+    to create user and/or login with it in the app.
+    '''
     resp = twitter.authorized_response()
     if resp is None:
         flash('You denied access to sign in!', 'error')

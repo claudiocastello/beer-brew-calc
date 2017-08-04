@@ -1,6 +1,5 @@
 - create an Admin panel with Flask-Admin
-- change database to PostgreSQL
-- deploy app to Heroku and test it live
+- deploy app to Heroku and test it live (need to read more about this...)
 - work on beer brewing calculations
 
 
@@ -15,3 +14,4 @@ Done:
 - fixed some problems with profile deletion after Facebook login implementation
 - finish implementation of social network login (Twitter)
 - change views to suit social network login (profile deletion, reset password, email change)
+- change database to PostgreSQL

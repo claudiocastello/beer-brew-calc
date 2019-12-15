@@ -24,7 +24,7 @@ oauthlib==2.0.2
 psycopg2==2.7.1
 pycparser==2.18
 python-http-client==2.4.0
-requests==2.18.1
+requests==2.20.0
 requests-oauthlib==0.8.0
 sendgrid==3.6.5
 six==1.10.0
